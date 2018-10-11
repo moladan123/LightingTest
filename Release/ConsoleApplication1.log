@@ -1,9 +1,7 @@
-﻿  pch.cpp
-  ConsoleApplication1.cpp
-  Game.cpp
+﻿  Game.cpp
   Generating code
-  0 of 9 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  3 of 20 functions (15.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+    1 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   ConsoleApplication1.vcxproj -> D:\users\alon\source\repos\ConsoleApplication1\Release\ConsoleApplication1.exe

@@ -11,7 +11,12 @@ public:
 
 private:
 	static bool IsExiting();
+
 	static void GameLoop();
+	static void processEvents();
+	static void render();
+	static void updateLogic();
+	static void getInput();
 
 	enum GameState {
 		Uninitialized, ShowingSplash, Paused,
