@@ -1,6 +1,11 @@
 ﻿  Game.cpp
+d:\users\alon\source\repos\consoleapplication1\consoleapplication1\game.cpp(42): warning C4244: 'argument': conversion from 'T' to 'float', possible loss of data
+          with
+          [
+              T=unsigned int
+          ]
   Generating code
-  3 of 20 functions (15.0%) were compiled, the rest were copied from previous compilation.
+  2 of 26 functions ( 7.7%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     1 functions had inline decision re-evaluated but remain unchanged
   Finished generating code

@@ -1,19 +1,31 @@
 #include "pch.h"
 #include "Game.h"
 
+// rectangle
+const sf::Vector2f rectSize(sf::Vector2f(200, 50));
+sf::Vector2f rectPosition(sf::Vector2f(0, 0)); // coordinates of the rectangle
+sf::Vector2f rectVelocity(sf::Vector2f(0, 0)); // velocity of the rectangle
+sf::RectangleShape rectangle(rectSize);
 
-sf::Vector2f rectPosition(sf::Vector2f(300, 100)); // coordinates of the rectangle
-sf::Vector2f rectVelocity(sf::Vector2f(0, 0)); // coordinates of the rectangle
-sf::RectangleShape rectangle(rectPosition);
+// lighting
+sf::CircleShape lightSource(2.0f, 4);
+int numExtraLights;
+int extraLightDistance; // distance from the main light source
+int offset;
 
+// lines
+sf::Shape* walls[100];
 
+// game states
 sf::Time ups;
 sf::Event currentEvent;
 Game::GameState Game::_gameState = Uninitialized;
 sf::RenderWindow Game::_mainWindow;
 
-
-
+const float rotationSpeed = 2.5f;
+const float force = 0.9f;
+const float degreesToRadians = 3.14159265358979323846f / 180.0f;
+const float damping = 0.94f;
 
 void Game::Start(void)
 {
@@ -26,8 +38,8 @@ void Game::Start(void)
 	_gameState = Game::Playing;
 	
 	rectangle.setFillColor(sf::Color(0, 0, 100));
-	rectangle.setOrigin(150, 50); // change the centre of balance of the rectangle
-	rectangle.setPosition(500, 500);
+	rectangle.setOrigin(rectSize.x / 2, rectSize.y / 2); // change the centre of balance of the rectangle
+	rectangle.setPosition(_mainWindow.getSize().x / 2, _mainWindow.getSize().x / 2);
 
 	sf::View view = _mainWindow.getDefaultView();
 	view.setSize(1024, -768);
@@ -73,7 +85,7 @@ void Game::GameLoop()
 			getInput();
 			//AI();
 			//Physics();
-		}
+		}  
 		render();
 		accumulator = clock.restart();
 
@@ -95,13 +107,30 @@ void Game::render() {
 	// Draw here
 	rectangle.setPosition(rectPosition);
 	_mainWindow.draw(rectangle);
+	lightSource.setPosition(rectPosition);
+	_mainWindow.draw(lightSource);
+	for (float j = -5.0f; j <= 5.0f; j += 0.05f) {
+		sf::Vertex line[] =
+		{
+			sf::Vertex(rectPosition),
+			sf::Vertex(sf::Vector2f(rectPosition.x + 2000.0f * cosf((rectangle.getRotation() + j) * degreesToRadians),
+									rectPosition.y + 2000.0f * sinf((rectangle.getRotation() + j) * degreesToRadians)))
+		};
+
+		_mainWindow.draw(line, 2, sf::Lines);
+	}
+
 	_mainWindow.display();
 }
 
 void Game::updateLogic() {
 
-	rectVelocity.y -= 1.0f;
+	// gravity
+	rectVelocity.y -= 0.0f;
 	
+	// damping movement
+	rectVelocity *= damping;
+
 	rectPosition += rectVelocity;
 	if (rectPosition.y < 0) {
 		rectPosition.y = 0;
@@ -110,13 +139,18 @@ void Game::updateLogic() {
 }
 
 void Game::getInput() {
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-		rectangle.rotate(1.0f);
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+		rectangle.rotate(rotationSpeed);
 	} 
-	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-		rectangle.rotate(359.0f);
+	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+		rectangle.rotate(360.0f - rotationSpeed);
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-		rectVelocity.y += 1.75f;
+		rectVelocity.x += force * cosf(rectangle.getRotation() * degreesToRadians);
+		rectVelocity.y += force * sinf(rectangle.getRotation() * degreesToRadians);
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+		rectVelocity.x -= force * cosf(rectangle.getRotation() * degreesToRadians);
+		rectVelocity.y -= force * sinf(rectangle.getRotation() * degreesToRadians);
 	}
 }
