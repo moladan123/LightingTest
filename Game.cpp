@@ -1,5 +1,9 @@
 #include "pch.h"
 #include "Game.h"
+#include <algorithm>
+#include <cmath>
+
+#define MAX_LINES 100
 
 // rectangle
 const sf::Vector2f rectSize(sf::Vector2f(200, 50));
@@ -8,13 +12,13 @@ sf::Vector2f rectVelocity(sf::Vector2f(0, 0)); // velocity of the rectangle
 sf::RectangleShape rectangle(rectSize);
 
 // lighting
-sf::CircleShape lightSource(2.0f, 4);
+sf::CircleShape lightSource(2.0f, 25);
 int numExtraLights;
 int extraLightDistance; // distance from the main light source
 int offset;
 
 // lines
-sf::Shape* walls[100];
+sf::Vertex walls[MAX_LINES][2];
 
 // game states
 sf::Time ups;
@@ -32,18 +36,35 @@ void Game::Start(void)
 	if (_gameState != Uninitialized)
 		return;
 
+	// window
 	_mainWindow.create(sf::VideoMode(1024, 768, 32), "Hello, World!");
 	_mainWindow.setVerticalSyncEnabled(true);
 	_mainWindow.setFramerateLimit(60);
 	_gameState = Game::Playing;
-	
-	rectangle.setFillColor(sf::Color(0, 0, 100));
-	rectangle.setOrigin(rectSize.x / 2, rectSize.y / 2); // change the centre of balance of the rectangle
-	rectangle.setPosition(_mainWindow.getSize().x / 2, _mainWindow.getSize().x / 2);
-
 	sf::View view = _mainWindow.getDefaultView();
 	view.setSize(1024, -768);
 	_mainWindow.setView(view);
+	
+	// rectangle
+	rectangle.setFillColor(sf::Color(0, 0, 100));
+	rectangle.setOrigin(rectSize.x / 2, rectSize.y / 2); // set the centre of balance of the rectangle
+	rectangle.setPosition(_mainWindow.getSize().x / 2, _mainWindow.getSize().x / 2);
+
+	// edges
+	walls[0][0].position = sf::Vector2f(100, 100);
+	walls[0][1].position = sf::Vector2f(200, 100);
+	walls[1][0].position = sf::Vector2f(200, 100);
+	walls[1][1].position = sf::Vector2f(200, 200);
+	walls[2][0].position = sf::Vector2f(200, 200);
+	walls[2][1].position = sf::Vector2f(300, 300);
+	walls[3][0].position = sf::Vector2f(300, 300);
+	walls[3][1].position = sf::Vector2f(300, 50);
+	walls[4][0].position = sf::Vector2f(300, 50);
+	walls[4][1].position = sf::Vector2f(300, 0);
+	walls[5][0].position = sf::Vector2f(300, 0);
+	walls[5][1].position = sf::Vector2f(100, 100);
+
+	
 
 	while (!IsExiting())
 	{
@@ -105,29 +126,101 @@ void Game::render() {
 	_mainWindow.clear();
 
 	// Draw here
+	// rectangle
 	rectangle.setPosition(rectPosition);
 	_mainWindow.draw(rectangle);
+
+	// walls
+	for (int i = 0; i < MAX_LINES; i++) {
+		sf::Vertex line[] =
+		{
+			walls[i][0],
+			walls[i][1]
+		};
+		_mainWindow.draw(line, 2, sf::Lines);
+	}
+
+
+	// lighting
 	lightSource.setPosition(rectPosition);
 	_mainWindow.draw(lightSource);
-	for (float j = -5.0f; j <= 5.0f; j += 0.05f) {
+	for (float j = -5.0f; j <= 5.0f; j += 0.04f) {
+		float angle = (rectangle.getRotation() + j) * degreesToRadians;
+		sf::Vector2f direction(cosf(angle), sinf(angle));
+
 		sf::Vertex line[] =
 		{
 			sf::Vertex(rectPosition),
-			sf::Vertex(sf::Vector2f(rectPosition.x + 2000.0f * cosf((rectangle.getRotation() + j) * degreesToRadians),
-									rectPosition.y + 2000.0f * sinf((rectangle.getRotation() + j) * degreesToRadians)))
+			sf::Vertex(rectPosition + direction * rayCast(rectPosition, direction))
 		};
-
 		_mainWindow.draw(line, 2, sf::Lines);
 	}
 
 	_mainWindow.display();
 }
 
+/* Finds the endpoint of the ray cast  */
+float Game::rayCast(sf::Vector2f start, sf::Vector2f direction) {
+
+	float length = 2000.0f;
+	sf::Vector2f end = start + length * direction;
+
+	for (int i = 0; i < MAX_LINES; i++) {
+		sf::Vector2f point = Game::intersection(start, end, walls[i][0].position, walls[i][1].position);
+		sf::Vector2f displacement = start - point;
+
+		if (Game::len(displacement) < length) {
+			length = Game::len(displacement);
+		}
+	}
+
+	return length;
+}
+
+double Game::len(sf::Vector2f v) {
+	return sqrt(v.x * v.x + v.y * v.y);
+}
+
+#define pdd sf::Vector2f
+sf::Vector2f Game::intersection(sf::Vector2f A, sf::Vector2f B, sf::Vector2f C, sf::Vector2f D)
+{
+	// Line AB represented as a1x + b1y = c1 
+	double a1 = B.y - A.y;
+	double b1 = A.x - B.x;
+	double c1 = a1 * (A.x) + b1 * (A.y);
+
+	// Line CD represented as a2x + b2y = c2 
+	double a2 = D.y - C.y;
+	double b2 = C.x - D.x;
+	double c2 = a2 * (C.x) + b2 * (C.y);
+
+	double determinant = a1 * b2 - a2 * b1;
+
+	if (determinant == 0)
+	{
+		// The lines are parallel. This is simplified 
+		// by returning a pair of FLT_MAX 
+		return pdd(FLT_MAX, FLT_MAX);
+	}
+	else
+	{
+		double x = (b2*c1 - b1 * c2) / determinant;
+		double y = (a1*c2 - a2 * c1) / determinant;
+		pdd result = pdd(x, y);
+		if (len(result - C) <= len(C - D) && len(result - D) < len(C - D) && len(result - A) <= len(A - B) && len(result - B) < len(A - B)) {
+			return result;
+		}
+		else {
+			return pdd(FLT_MAX, FLT_MAX);
+		}
+	}
+}
+
 void Game::updateLogic() {
 
 	// gravity
 	rectVelocity.y -= 0.0f;
-	
+
 	// damping movement
 	rectVelocity *= damping;
 
@@ -141,7 +234,7 @@ void Game::updateLogic() {
 void Game::getInput() {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
 		rectangle.rotate(rotationSpeed);
-	} 
+	}
 	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
 		rectangle.rotate(360.0f - rotationSpeed);
 	}
