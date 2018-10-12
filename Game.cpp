@@ -13,8 +13,8 @@ sf::RectangleShape rectangle(rectSize);
 
 // lighting
 sf::CircleShape lightSource(2.0f, 25);
-int numExtraLights;
-int extraLightDistance; // distance from the main light source
+int numExtraLights = 16;
+int extraLightDistance = 10; // distance from the main light source
 int offset;
 
 // lines
@@ -144,16 +144,53 @@ void Game::render() {
 	// lighting
 	lightSource.setPosition(rectPosition);
 	_mainWindow.draw(lightSource);
-	for (float j = -5.0f; j <= 5.0f; j += 0.04f) {
-		float angle = (rectangle.getRotation() + j) * degreesToRadians;
-		sf::Vector2f direction(cosf(angle), sinf(angle));
 
+	sf::Vector2f last;
+	float angle = (rectangle.getRotation() + -5.0f) * degreesToRadians;
+	sf::Vector2f direction(cosf(angle), sinf(angle));
+	last = rectPosition + direction * rayCast(rectPosition, direction);
+
+	sf::Color c(255, 255, 255, 50);
+
+	for (float j = -5.0f; j <= 5.0f; j += 0.1f) {
+		angle = (rectangle.getRotation() + j) * degreesToRadians;
+		direction = sf::Vector2f(cosf(angle), sinf(angle));
 		sf::Vertex line[] =
 		{
-			sf::Vertex(rectPosition),
-			sf::Vertex(rectPosition + direction * rayCast(rectPosition, direction))
+			sf::Vertex(rectPosition, c),
+			sf::Vertex(rectPosition + direction * rayCast(rectPosition, direction), c),
+			sf::Vertex(last, c),
+			sf::Vertex(rectPosition, c),
+
 		};
-		_mainWindow.draw(line, 2, sf::Lines);
+		last = rectPosition + direction * rayCast(rectPosition, direction);
+		_mainWindow.draw(line, 4, sf::PrimitiveType::Quads);
+	}
+
+	for (int theta = 0.0f; theta < 360.0f; theta += 360.0f/numExtraLights) {
+		sf::Vector2f offset = ((float)extraLightDistance) * sf::Vector2f(sinf(theta * degreesToRadians), cosf(theta * degreesToRadians));
+
+		sf::Vector2f last;
+		float angle = (rectangle.getRotation() + -5.0f) * degreesToRadians;
+		sf::Vector2f direction(cosf(angle), sinf(angle));
+		last = rectPosition + offset + direction * rayCast(rectPosition + offset, direction);
+
+		sf::Color c(255, 255, 255, 10);
+
+		for (float j = -5.0f; j <= 5.0f; j += 0.1f) {
+			angle = (rectangle.getRotation() + j) * degreesToRadians;
+			direction = sf::Vector2f(cosf(angle), sinf(angle));
+			sf::Vertex line[] =
+			{
+				sf::Vertex(rectPosition + offset, c),
+				sf::Vertex(rectPosition + offset + direction * rayCast(rectPosition + offset, direction), c),
+				sf::Vertex(last, c),
+				sf::Vertex(rectPosition + offset, c),
+
+			};
+			last = rectPosition + offset + direction * rayCast(rectPosition + offset, direction);
+			_mainWindow.draw(line, 4, sf::PrimitiveType::Quads);
+		}
 	}
 
 	_mainWindow.display();
